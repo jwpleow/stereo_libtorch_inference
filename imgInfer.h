@@ -14,7 +14,6 @@ namespace Inference
 
         void runInference(const cv::Mat& left, const cv::Mat& right, cv::Mat& disparity);
 
-
         private:
 
         torch::Device device;

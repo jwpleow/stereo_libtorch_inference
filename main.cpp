@@ -12,27 +12,24 @@ int main()
     Camera::StereoCamera cam(capture_string, "../CalibParams_Stereo.yml");
     Inference::InferClient aanetInferClient("../aanet_gpu_model.pt", device);
 
-    Utils::FPSCounter fps;
-    fps.init();
     while (true)
     {
         cv::Mat left, right;
+        // cv::Mat left = cv::imread("../left.png");
+        // cv::Mat right = cv::imread("../right.png");
         cam.read(left, right);
-
-        // left = cv::imread("../left.png");
-        // right = cv::imread("../right.png");
-
         cv::imshow("Left", left);
         cv::imshow("Right", right);
         cv::Mat disparity;
         aanetInferClient.runInference(left, right, disparity);
 
         cv::Mat visDisparity;
-        visDisparity = disparity / 200.;
+        double min_disp_val, max_disp_val;
+        cv::minMaxLoc(disparity, &min_disp_val, &max_disp_val);
+        visDisparity = disparity / max_disp_val;
         cv::imshow("Disparity", visDisparity);
-        fps.tick();
-        fps.printAvgFps();
-        if (cv::waitKey(1) >= 0)
+
+        if (cv::waitKey(100) >= 0)
         {
             break;
         }

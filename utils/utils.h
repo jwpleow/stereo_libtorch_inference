@@ -40,10 +40,13 @@ namespace Utils{
 
     // Prints the attributes of the tensor (e.g. size, datatype, device)
     void printTensorProperties(const torch::Tensor& tens);
-
+    // Prints the attributes of the cv::Mat
+    void printCvMatProperties(const cv::Mat& mat);
+    
     /* 
     Converts cv::Mat to torch::Tensor (For Images)
-        cv::Mat - Should be in CV_8UCx, with the default arrangement of dimensions [H, W, C]
+        cv::Mat - MUST BE CONTIGUOUS DATA! Safest to .clone() the cv::Mat before converting it here 
+                  Should be in CV_8UCx, with the default arrangement of dimensions [H, W, C]. 
         torch::Tensor - size [1, C, H, W], float, normalized to [0, 1]
     */
     void convertCvMatToTensor(const cv::Mat& mat, torch::Tensor& tens);

@@ -37,11 +37,16 @@ namespace Utils{
     {
         double minVal, maxVal;
         cv::minMaxLoc(mat, &minVal, &maxVal);
+
+        cv::Scalar means = cv::mean(mat);
+
         std::cout << "Dimensions: " << mat.dims << "\n"
                   << "Datatype: " << getCvMatType(mat.type()) << "\n"
                   << "Size: " << mat.size << "\n"
-                  << "Number of Elements: " << mat.numel() << "\n";
-                  << "Max value in "
+                  << "Number of Elements: " << mat.total() << "\n"
+                  << "Max value: " << maxVal << "\n"
+                  << "Min value: " << minVal << "\n"
+                  << "Means of each channel: " << means << "\n";
     }
 
     void convertCvMatToTensor(const cv::Mat &mat, torch::Tensor& tens)
@@ -61,7 +66,7 @@ namespace Utils{
             std::memcpy(mat.data, tens.data_ptr(), sizeof(float) * tens.numel());
         }
         else if (tens.dim() == 4 && tens.size(1) == 3)
-        {
+        { // untested!
             mat = cv::Mat::zeros(tens.size(2), tens.size(3), CV_32FC3);
             torch::Tensor temp = tens.permute({0, 2, 3, 1}).clone();
             std::memcpy(mat.data, temp.data_ptr(), sizeof(float) * temp.numel());
@@ -116,12 +121,9 @@ namespace Utils{
             default:     oss << "Undefined"; break;
         }
         
-        if (channels > 1)
-        {
-            oss << "C";
-            oss << channels;
-        }
-        
+        oss << "C";
+        oss << channels;
+    
         return oss.str();
     }
 

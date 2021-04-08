@@ -90,17 +90,20 @@ void StereoCamera::read(cv::Mat &left, cv::Mat &right)
 {
     cv::Mat temp;
     cv::Mat left_temp, right_temp;
+    cv::Mat left_temp2, right_temp2;
     {
         std::lock_guard<std::mutex> scopeLock(frame_read_lock); // todo: get a proper circular buffer
         temp = (*frame_buffer.front()).clone();
         frame_buffer.pop();
-        splitImage(temp, left_temp, right_temp);
     }
+    splitImage(temp, left_temp, right_temp);
  
     // undistort and rectify
     undistort(left_temp, right_temp, left_temp, right_temp);
     // crop to valid matched ROI
-    cropRoi(left_temp, right_temp, left, right);
+    cropRoi(left_temp, right_temp, left_temp2, right_temp2);
+    left = left_temp2.clone();
+    right = right_temp2.clone();
 }
 
 void StereoCamera::undistort(const cv::Mat &input_left, const cv::Mat &input_right, cv::Mat &output_left, cv::Mat &output_right)
