@@ -169,7 +169,6 @@ void StereoCamera::cropRoi(const cv::Mat &input_left, const cv::Mat &input_right
 
 void StereoCamera::calculateMatchedRoi()
 {
-    // new valid regions of interest for each camera, ensuring epipolar lines are still intact, matching distances from centreline
     // match y loc
     int new_y_loc = std::max(stereo_calib_params.valid_roi_1.y, stereo_calib_params.valid_roi_2.y);
     // x loc for right img
