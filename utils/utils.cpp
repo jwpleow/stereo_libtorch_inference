@@ -7,14 +7,21 @@ namespace Utils{
         cv::hconcat(left, right, combined);
     }
 
-    void transformImage(const cv::Mat &input, torch::Tensor &output, torch::Device device)
+    void transformImage(const cv::Mat &input, torch::Tensor &output, const cv::Size& required_padding, torch::Device device)
     {
         torch::Tensor temp;
         convertCvMatToTensor(input, temp);
         normalizeTensor(temp);
-        // output = temp;
-        padTensor(temp, output);
 
+        if (required_padding.height > 0 || required_padding.width > 0)
+        {
+            padTensor(temp, output, required_padding);
+        }
+        else 
+        {
+            output = temp;
+        }
+        
         output = output.to(device);
     }
 
@@ -66,7 +73,7 @@ namespace Utils{
             std::memcpy(mat.data, tens.data_ptr(), sizeof(float) * tens.numel());
         }
         else if (tens.dim() == 4 && tens.size(1) == 3)
-        { // untested!
+        { // TODO: this part does the wrong thing!?
             mat = cv::Mat::zeros(tens.size(2), tens.size(3), CV_32FC3);
             torch::Tensor temp = tens.permute({0, 2, 3, 1}).clone();
             std::memcpy(mat.data, temp.data_ptr(), sizeof(float) * temp.numel());
@@ -99,7 +106,24 @@ namespace Utils{
         {
             padded = original; // hmm...
         }
-        
+    }
+
+    void padTensor(const torch::Tensor &original, torch::Tensor &padded, const cv::Size& padding)
+    {
+        padded = torch::zeros({1, original.size(1), original.size(2) + padding.height, original.size(3) + padding.width});
+        padded = torch::nn::functional::pad(original, torch::nn::functional::PadFuncOptions({0, padding.width, padding.height, 0}));
+    }
+
+    void calculatePadding(const cv::Size& original_size, const cv::Size& expected_size, cv::Size& padding_needed)
+    {
+        padding_needed.height = std::max(expected_size.height - original_size.height, 0);
+        padding_needed.width = std::max(expected_size.width - original_size.width, 0);
+    }
+
+    void unpadCvMat(const cv::Mat &padded, cv::Mat &unpadded, const cv::Size& original_size, const cv::Size& padding_added)
+    {
+        cv::Rect original_rect(0, padding_added.height, original_size.width, original_size.height); // since padded on the top and right
+        unpadded = padded(original_rect).clone();
     }
 
     std::string getCvMatType(int type)
@@ -160,7 +184,7 @@ namespace Utils{
         return avg_fps_;
     }
 
-    void FPSCounter::tick()
+    void FPSCounter::tick(bool print)
     {
         // if past 1 second, reset the start time and calculate the new fps
         if (int millisecond_count = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time_).count() > 1000)
@@ -168,7 +192,9 @@ namespace Utils{
             start_time_ = std::chrono::system_clock::now();
             avg_fps_ = 0.8f * avg_fps_ + 0.2f * static_cast<float>(frames1sec_) * (1000.f / static_cast<float>(1000 + millisecond_count));
             frames1sec_ = 0;
+            if (print) std::cout << "FPS: " << avg_fps_ << "\n";
         }
         frames1sec_++;
     }
+
 } // namespace Utils

@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "Camera.h"
 
 
 namespace Camera
@@ -55,7 +55,7 @@ void CameraBase::update()
         if (!frame_buffer.try_push(last_frame))
         {
             std::lock_guard<std::mutex> scopeLock(frame_read_lock);
-            frame_buffer.pop(); // TODO: hmm...
+            frame_buffer.pop(); // TODO: hmm... this is a terrible solution
         }
         // long msec = video_capture.get(cv::CAP_PROP_POS_MSEC); // time of frame capture - perhaps may need to correct to unix https://answers.opencv.org/question/61099/is-it-possible-to-get-frame-timestamps-for-live-streaming-video-frames-on-linux/
         // std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -69,8 +69,8 @@ void CameraBase::startUpdateThread()
 
 void CameraBase::read(cv::Mat& frame)
 {
-    // std::lock_guard<std::mutex> scopeLock(frame_read_lock);
-    // frame = last_frame;
+    std::lock_guard<std::mutex> scopeLock(frame_read_lock);
+    frame = last_frame;
 }
 
 
@@ -91,11 +91,22 @@ void StereoCamera::read(cv::Mat &left, cv::Mat &right)
     cv::Mat temp;
     cv::Mat left_temp, right_temp;
     cv::Mat left_temp2, right_temp2;
+    
+    int n;
+    while (frame_buffer.empty())
     {
-        std::lock_guard<std::mutex> scopeLock(frame_read_lock); // todo: get a proper circular buffer
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        n++;
+        if ((n % 10) == 0 && n > 1) std::cout << "Frame buffer empty, waiting for image...\n";
+    }
+
+    {
+        std::lock_guard<std::mutex> scopeLock(frame_read_lock); // todo: use a proper circular buffer
         temp = (*frame_buffer.front()).clone();
         frame_buffer.pop();
     }
+
+    
     splitImage(temp, left_temp, right_temp);
  
     // undistort and rectify

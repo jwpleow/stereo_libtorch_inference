@@ -1,5 +1,5 @@
-#include "imgInfer.h"
-#include "camera.h"
+#include "InferClient.h"
+#include "Camera.h"
 #include "utils/utils.h"
 
 
@@ -7,21 +7,24 @@ int main()
 {
     // test
     std::string capture_string = "udpsrc port=5000 ! application/x-rtp, media=video, encoding-name=JPEG, payload=96 ! rtpjpegdepay ! jpegdec ! videoconvert ! appsink";
+    std::string calib_params_file = "../CalibParams_Stereo.yml";
+    std::string model_path = "../aanet_gpu_model.pt";
+    cv::Size expected_size(672, 384); // WxH
     torch::Device device(torch::kCUDA);
 
-    Camera::StereoCamera cam(capture_string, "../CalibParams_Stereo.yml");
-    Inference::InferClient aanetInferClient("../aanet_gpu_model.pt", device);
+    Inference::CameraInferClient client(capture_string, calib_params_file, model_path, expected_size, device);
 
+    cv::Mat left, right;
+    cv::Mat disparity;
+
+    Utils::FPSCounter fps;
     while (true)
     {
-        cv::Mat left, right;
-        // cv::Mat left = cv::imread("../left.png");
-        // cv::Mat right = cv::imread("../right.png");
-        cam.read(left, right);
+        client.cam.read(left, right);
         cv::imshow("Left", left);
         cv::imshow("Right", right);
-        cv::Mat disparity;
-        aanetInferClient.runInference(left, right, disparity);
+
+        client.getDisparity(disparity);
 
         cv::Mat visDisparity;
         double min_disp_val, max_disp_val;
@@ -29,7 +32,9 @@ int main()
         visDisparity = disparity / max_disp_val;
         cv::imshow("Disparity", visDisparity);
 
-        if (cv::waitKey(100) >= 0)
+        fps.tick(true);
+
+        if (cv::waitKey(1) >= 0)
         {
             break;
         }

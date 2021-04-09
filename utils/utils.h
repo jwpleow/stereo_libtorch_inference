@@ -26,7 +26,7 @@ namespace Utils{
     to a normalised and padded torch::Tensor of size [1, C, H, W]
     and sends to device
     */
-    void transformImage(const cv::Mat& input, torch::Tensor& output, torch::Device device);
+    void transformImage(const cv::Mat& input, torch::Tensor& output, const cv::Size& required_padding, torch::Device device);
 
 
     /*
@@ -67,10 +67,27 @@ namespace Utils{
     void normalizeTensor(torch::Tensor &tens);
 
     /*
+    Calculates the padding required to bring original_size to expected_size. 
+    Note values in padding_needed will default to 0 if original size exceeds expected size
+    */
+    void calculatePadding(const cv::Size& original_size, const cv::Size& expected_size, cv::Size& padding_needed);
+
+    /*
     Input tensor should be [1, C, H, W]
-    Pads the tensor to have dimensions that are a multiple of <factor>
+    Pads the tensor to have dimensions that are a multiple of <factor>, with padding added at the top and right side
     */
     void padTensor(const torch::Tensor& original, torch::Tensor& padded, int factor = 96);
+
+    /*
+    Input tensor should be [1, C, H, W]
+    Pads the tensor by padding.width and padding.height, with padding added at the top and right side
+    */
+    void padTensor(const torch::Tensor &original, torch::Tensor &padded, const cv::Size &padding);
+
+    /*
+    unpad CvMat to original_size, assuming padding_added was added on the top right. Makes a deep copy
+    */
+    void unpadCvMat(const cv::Mat &padded, cv::Mat &unpadded, const cv::Size& original_size, const cv::Size& padding_added);
 
     // Prints datatype of the cv::Mat e.g. CV_32FC3
     // pass in the type like this: std::string type = getCvMatType(mat.type())
@@ -94,8 +111,9 @@ namespace Utils{
         void printAvgFps();
         // returns avg_fps_
         float getAvgFps();
-        // tick
-        void tick();
+        // tick. set print to true to print a message when fps updates
+        void tick(bool print = false);
+
 
     protected:
         std::chrono::system_clock::time_point start_time_; // start time to count till 1 second
@@ -109,7 +127,7 @@ namespace Utils{
     /*
     Timer from https://gist.github.com/gongzhitaao/7062087
     Usage:
-    Timer tmr;
+    Utils::Timer tmr;
     // code
     double t = tmr.elapsed();
     std::cout << t << std::endl;
