@@ -20,11 +20,9 @@ int main()
     Utils::FPSCounter fps;
     while (true)
     {
-        client.cam.read(left, right);
+        client.getFeed(left, right, disparity);
         cv::imshow("Left", left);
         cv::imshow("Right", right);
-
-        client.getDisparity(disparity);
 
         cv::Mat visDisparity;
         double min_disp_val, max_disp_val;

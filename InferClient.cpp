@@ -44,7 +44,7 @@ void InferClient::runInference(const cv::Mat& left, const cv::Mat& right, cv::Ma
         std::cerr << "Expected width: " << expected_size.width << ", Left image width: " << left.cols << "\n";
     }
 
-    // preprocessing
+    // preprocessing ~ 0.004s
     torch::Tensor leftT, rightT;
     original_size = cv::Size(left.cols, left.rows);
     Utils::calculatePadding(original_size, expected_size, required_padding);
@@ -55,7 +55,7 @@ void InferClient::runInference(const cv::Mat& left, const cv::Mat& right, cv::Ma
     input.push_back(leftT);
     input.push_back(rightT);
 
-    // predict
+    // predict ~ 0.075s
     auto output = model.forward(input).toTensor().cpu().squeeze();
 
     cv::Mat disparity_temp;
@@ -72,12 +72,18 @@ CameraInferClient::~CameraInferClient()
 {
 }
 
-void CameraInferClient::getDisparity(cv::Mat& disparity)
+void CameraInferClient::getFeed(cv::Mat &left, cv::Mat &right, cv::Mat &disparity)
+{
+    cam.read(left, right);
+    runInference(left, right, disparity);
+}
+
+void CameraInferClient::getFeed(cv::Mat &combined, cv::Mat &disparity)
 {
     cv::Mat left, right;
-    cam.read(left, right);
-
-    runInference(left, right, disparity);
+    getFeed(left, right, disparity);
+    cv::hconcat(left, right, combined);
+    combined = combined.clone(); // is this necessary?
 }
 
 } // namespace Inference
