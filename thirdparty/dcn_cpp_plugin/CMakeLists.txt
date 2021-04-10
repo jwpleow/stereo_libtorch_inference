@@ -19,7 +19,7 @@ set(CUDA_HOST_COMPILATION_CPP ON)
 #-D__CUDA_NO_HALF_OPERATORS__ 
 #-D__CUDA_NO_HALF_CONVERSIONS__
 #-D__CUDA_NO_HALF2_OPERATORS__)
-set(CUDA_NVCC_FLAGS -std=c++14 --expt-relaxed-constexpr -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ )
+set(CUDA_NVCC_FLAGS -std=c++14 --expt-relaxed-constexpr -D__CUDA_NO_HALF_OPERATORS__ )
 
 #set(CUDA_NVCC_FLAGS -std=c++11 -Xcompiler -fexceptions -Xcompiler -fPIC 
 #-gencode arch=compute_30,code=sm_30
