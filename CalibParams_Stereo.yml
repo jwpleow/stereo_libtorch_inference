@@ -1,6 +1,6 @@
 %YAML:1.0
 ---
-# 39.2cm baseline parallel Arducam calibration (poor calibration quality due to too small chessboard used!)
+# 39.2cm baseline parallel Arducam calibration (poor calibration quality!)
 # Calibration file generated on 2021-03-22 17:49:55 with calibration flags +use_intrinsic_guess+zero_tangent_dist+rational_model+thin_prism_model+tilted_model+same_focal_length
 reprojection_error: 1.4632845803487526e-01
 epipolar_error: 9.3507753050882755e-02

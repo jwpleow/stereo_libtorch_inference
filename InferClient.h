@@ -36,10 +36,12 @@ namespace Inference
         CameraInferClient(const std::string& capture_string, const std::string& stereo_calib_params_file, const std::string& model_path, const cv::Size& expected_size, torch::Device device);
         ~CameraInferClient();
 
-        // CV_32FC3 images and disparity
+        // CV_8UC3 images and CV_32FC1 disparity
         void getFeed(cv::Mat& left, cv::Mat& right, cv::Mat& disparity);
-        // combined image instead
+        // CV_8UC3 combined image instead with disparity
         void getFeed(cv::Mat& combined, cv::Mat& disparity);
+        // CV_8UC3 images and CV_32FC1 depthmap (in metres) of the left image
+        void getDepth(cv::Mat& left, cv::Mat& right, cv::Mat& depthmap);
 
         public:
         Camera::StereoCamera cam;

@@ -1,4 +1,5 @@
 #include <chrono>
+#include <opencv2/calib3d.hpp>
 
 #include "InferClient.h"
 
@@ -64,7 +65,7 @@ void InferClient::runInference(const cv::Mat& left, const cv::Mat& right, cv::Ma
 }
 
 CameraInferClient::CameraInferClient(const std::string &capture_string, const std::string &stereo_calib_params_file, const std::string &model_path, const cv::Size &expected_size, torch::Device device)
-    : cam(capture_string, stereo_calib_params_file), InferClient(model_path, expected_size, device)
+    : InferClient(model_path, expected_size, device), cam(capture_string, stereo_calib_params_file)
 {
 }
 
@@ -84,6 +85,13 @@ void CameraInferClient::getFeed(cv::Mat &combined, cv::Mat &disparity)
     getFeed(left, right, disparity);
     cv::hconcat(left, right, combined);
     combined = combined.clone(); // is this necessary?
+}
+
+void CameraInferClient::getDepth(cv::Mat &left, cv::Mat &right, cv::Mat &depthmap)
+{
+    cv::Mat disparity;
+    getFeed(left, right, disparity);
+    cv::reprojectImageTo3D(disparity, depthmap, cam.stereo_calib_params.Q, true, -1); // -1 outputs CV_32F, will be reprojected to left camera's rectified coord system
 }
 
 } // namespace Inference

@@ -92,6 +92,7 @@ class StereoCamera : public CameraBase
     StereoCamera(const std::string& capture_string, const std::string& stereo_calib_file);
     ~StereoCamera();
 
+    // returns CV_8UC3
     void read(cv::Mat& left, cv::Mat& right);
 
     public:

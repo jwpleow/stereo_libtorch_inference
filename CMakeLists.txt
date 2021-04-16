@@ -13,6 +13,7 @@ project(torch_inference)
 # set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
 
 # set(CMAKE_FIND_DEBUG_MODE 1)
+set(CMAKE_CXX_STANDARD 14)
 
 find_package(Torch REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -26,4 +27,11 @@ target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 # message(STATUS "OpenCV include path: ${OpenCV_INCLUDE_DIRS}")
 # message(STATUS "Torch include path: ${TORCH_LIBRARIES}")
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
+# ROS
+include_directories(/opt/ros/noetic/include/ /opt/ros/noetic/lib/)
+add_executable(camera_publisher main_ros.cpp InferClient.cpp Camera.cpp utils/utils.cpp)
+target_link_libraries(camera_publisher -I/opt/ros/noetic/include -L/opt/ros/noetic/lib
+-lroscpp -lrostime -lrosconsole -lroscpp_serialization -lcv_bridge)
+target_link_libraries(camera_publisher "${TORCH_LIBRARIES}")
+target_link_libraries(camera_publisher -Wl,--no-as-needed dcn_v2_cuda_forward_v2)
+target_link_libraries(camera_publisher ${OpenCV_LIBS})
