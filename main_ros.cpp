@@ -84,6 +84,7 @@ int main(int argc, char** argv)
     std::string raw_camera_topic = "/camera";
 
     Camera::StereoRectifier rectifier(calib_params_file);
+    Inference::InferClient infer_client(model_path, expected_size, device);
 
     ros::init(argc, argv, "camera_processor");
 
@@ -92,19 +93,32 @@ int main(int argc, char** argv)
     spinner.start();
 
     ROS_Input ros_input(nh, raw_camera_topic);
-    cv::Mat frame;
+    cv::Mat frame, frameC3, left_temp, right_temp, left, right, left_C3, right_C3;
+    cv::Mat disparity, disparity_vis, pointcloud;
     int64_t timestamp;
 
     if (ros::ok())
-        ROS_INFO("camera_processor node ok");
+        ROS_INFO("camera_node ok");
 
     while (ros::ok())
     {
-        timestamp = ros_input.read(frame);
+        timestamp = ros_input.read(frame); // CV_8UC1
+        rectifier.splitImage(frame, left_temp, right_temp);
+        rectifier.rectify(left_temp, right_temp, left, right);
+        cv::cvtColor(left, left_C3, cv::COLOR_GRAY2RGB);
+        cv::cvtColor(right, right_C3, cv::COLOR_GRAY2RGB);
 
-        cv::imshow("frame", frame);
-        cv::waitKey(1);
+        infer_client.runInference(left_C3, right_C3, disparity);
 
+        // visualisation
+        double min_disp_val, max_disp_val;
+        cv::minMaxLoc(disparity, &min_disp_val, &max_disp_val);
+        disparity_vis = disparity / max_disp_val;
+        cv::imshow("Left", left);
+        cv::imshow("Right", right);
+        cv::imshow("Disparity", disparity_vis);
+        
+        if (cv::waitKey(1) >= 0) break;
     }
     ros::waitForShutdown();
     

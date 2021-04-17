@@ -7,16 +7,20 @@ namespace Camera
 StereoRectifier::StereoRectifier(const std::string& stereo_calib_file)
 {
     loadStereoCalibParams(stereo_calib_file);
+    initialiseStereoRectificationAndUndistortMap();
 }
 
 StereoRectifier::~StereoRectifier()
 {
 }
 
-void StereoRectifier::undistort(const cv::Mat &input_left, const cv::Mat &input_right, cv::Mat &output_left, cv::Mat &output_right)
+void StereoRectifier::rectify(const cv::Mat &input_left, const cv::Mat &input_right, cv::Mat &output_left, cv::Mat &output_right)
 {
-    cv::remap(input_left, output_left, stereo_calib_params.undistort_map_1_1, stereo_calib_params.undistort_map_1_2, cv::INTER_LINEAR);
-    cv::remap(input_right, output_right, stereo_calib_params.undistort_map_2_1, stereo_calib_params.undistort_map_2_2, cv::INTER_LINEAR);
+    // assert(!validMatchedRoi_1.empty() && !validMatchedRoi_2.empty());
+    cv::remap(input_left, input_left, stereo_calib_params.undistort_map_1_1, stereo_calib_params.undistort_map_1_2, cv::INTER_LINEAR);
+    output_left = input_left(stereo_calib_params.valid_matched_roi_1);
+    cv::remap(input_right, input_right, stereo_calib_params.undistort_map_2_1, stereo_calib_params.undistort_map_2_2, cv::INTER_LINEAR);
+    output_right = input_right(stereo_calib_params.valid_matched_roi_2);
 }
 
 void StereoRectifier::loadStereoCalibParams(const std::string &stereo_calib_file)
@@ -38,7 +42,7 @@ void StereoRectifier::loadStereoCalibParams(const std::string &stereo_calib_file
         fs["F"] >> stereo_calib_params.F;
         calibration_loaded = true;
         fs.release();
-        // std::cout << "Loaded stereo calibration file " << stereo_calib_file << std::endl;
+        std::cout << "Loaded stereo calibration file " << stereo_calib_file << std::endl;
     }
     else
     {
@@ -54,13 +58,6 @@ void StereoRectifier::splitImage(const cv::Mat &original, cv::Mat &left, cv::Mat
     static cv::Rect rightRect(stereo_calib_params.image_width, 0, stereo_calib_params.image_width, stereo_calib_params.image_height);
     left = original(leftRect);
     right = original(rightRect);
-}
-
-void StereoRectifier::cropRoi(const cv::Mat &input_left, const cv::Mat &input_right, cv::Mat &output_left, cv::Mat &output_right)
-{
-    // assert(!validMatchedRoi_1.empty() && !validMatchedRoi_2.empty());
-    output_left = input_left(stereo_calib_params.valid_matched_roi_1);
-    output_right = input_right(stereo_calib_params.valid_matched_roi_2);
 }
 
 void StereoRectifier::calculateMatchedRoi()
@@ -166,7 +163,6 @@ void CameraBase::read(cv::Mat& frame)
 StereoCamera::StereoCamera(const std::string &capture_string, const std::string &stereo_calib_file)
     : CameraBase(capture_string), StereoRectifier(stereo_calib_file)
 {
-    initialiseStereoRectificationAndUndistortMap();
 }
 
 StereoCamera::~StereoCamera()
@@ -177,7 +173,6 @@ void StereoCamera::read(cv::Mat &left, cv::Mat &right)
 {
     cv::Mat temp;
     cv::Mat left_temp, right_temp;
-    cv::Mat left_temp2, right_temp2;
     
     int n;
     while (frame_buffer.empty())
@@ -195,13 +190,8 @@ void StereoCamera::read(cv::Mat &left, cv::Mat &right)
 
     
     splitImage(temp, left_temp, right_temp);
- 
-    // undistort and rectify
-    undistort(left_temp, right_temp, left_temp, right_temp);
-    // crop to valid matched ROI
-    cropRoi(left_temp, right_temp, left_temp2, right_temp2);
-    left = left_temp2.clone();
-    right = right_temp2.clone();
+    // undistort and rectify, and crop
+    rectify(left_temp, right_temp, left, right);
 }
 
 } // namespace Camera
