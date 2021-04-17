@@ -7,11 +7,12 @@
 #include "sensor_msgs/image_encodings.h"
 #include "std_msgs/Header.h"
 #include "cv_bridge/cv_bridge.h"
+#include "image_transport/image_transport.h"
 
 #include "InferClient.h"
 #include "Camera.h"
 #include "utils/utils.h"
-
+#include "ROS_Input.h"
 
 
 void publishImage(const ros::Publisher& pub, const cv::Mat& image, const std::string& encoding, const ros::Time& timestamp)
@@ -30,7 +31,7 @@ void publishImage(const ros::Publisher& pub, const cv::Mat& image, const std::st
 void publishPointCloud(const ros::Publisher& pub, const cv::Mat& image, const cv::Mat& depthmap, const ros::Time& timestamp)
 {
     // https://github.com/ros-perception/image_pipeline/blob/noetic/stereo_image_proc/src/nodelets/point_cloud2.cpp#L159
-    // http://docs.ros.org/en/kinetic/api/cartographer_ros/html/msg__conversion_8cc_source.html
+    // http://docs.ros.org/en/melodic/api/cartographer_ros/html/msg__conversion_8cc_source.html
     // xyz field and intensity [0, 1] field?
     sensor_msgs::PointCloud2 cloudmsg;
     cloudmsg.header.stamp = timestamp;
@@ -55,10 +56,9 @@ void publishPointCloud(const ros::Publisher& pub, const cv::Mat& image, const cv
     cloudmsg.data.resize(cloudmsg.height * cloudmsg.row_step);
     
     if (depthmap.rows != image.rows || depthmap.cols != image.cols ) std::cerr << "depthmap and image have diff dimensions!\n";
-    // std::cout << depthmap << "\n";
+
     cv::Mat_<cv::Vec3f> mat = depthmap;
-    // std::cout << mat << "\n";
-    // #pragma omp parallel for
+
     for (int r = 0; r < mat.rows; r++)
     {
         for (int c = 0; c < mat.cols; c++, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity)
@@ -74,57 +74,76 @@ void publishPointCloud(const ros::Publisher& pub, const cv::Mat& image, const cv
 }
 
 
-
-
 int main(int argc, char** argv)
 {
-    // test
-    std::string capture_string = "udpsrc port=5000 ! application/x-rtp, media=video, encoding-name=JPEG, payload=96 ! rtpjpegdepay ! jpegdec ! videoconvert ! appsink";
     std::string calib_params_file = "../CalibParams_Stereo.yml";
     std::string model_path = "../aanet_gpu_model.pt";
     cv::Size expected_size(672, 384); // WxH
     torch::Device device(torch::kCUDA);
 
-    Inference::CameraInferClient client(capture_string, calib_params_file, model_path, expected_size, device);
+    std::string raw_camera_topic = "/camera";
 
-    ros::init(argc, argv, "camera_publisher");
+    Camera::StereoRectifier rectifier(calib_params_file);
 
-    ros::NodeHandle n;
+    ros::init(argc, argv, "camera_processor");
 
-    // ros::Publisher left_image_pub = n.advertise<sensor_msgs::Image>("/camera/left/rectified", 2);
-    // ros::Publisher right_image_pub = n.advertise<sensor_msgs::Image>("/camera/right/rectified", 2);
-    // ros::Publisher left_disp_pub = n.advertise<sensor_msgs::Image>("/camera/left/depth", 2);
-    ros::Publisher point_cloud_pub = n.advertise<sensor_msgs::PointCloud2>("/camera/left/pointcloud", 2);
+    ros::NodeHandle nh;
+    ros::AsyncSpinner spinner(4);
+    spinner.start();
 
-    ros::Rate rate(10.0);
-
-    uint32_t seq = 0;
-
-    cv::Mat left, right, left8U, right8U;
-    cv::Mat depthmap;
+    ROS_Input ros_input(nh, raw_camera_topic);
+    cv::Mat frame;
+    int64_t timestamp;
 
     if (ros::ok())
-        ROS_INFO("Camera publisher started on /camera/left/rectified, /camera/right/rectified, /camera/left/disparity");
+        ROS_INFO("camera_processor node ok");
 
     while (ros::ok())
     {
-        client.getDepth(left, right, depthmap);
+        timestamp = ros_input.read(frame);
 
-        // cv::extractChannel(left, leftMono_f, 0);
-        // cv::extractChannel(right, rightMono, 0);
-        // leftMono_f.convertTo(leftMono, CV_8U);
-        // rightMono.convertTo(rightMono, CV_8U);
+        cv::imshow("frame", frame);
+        cv::waitKey(1);
 
-        auto timestamp = ros::Time::now() - ros::Duration(0.1); // TODO: this offsets the timestamp since I don't have a way to get the frame timestamp atm..
-        // publishImage(left_image_pub, leftMono, sensor_msgs::image_encodings::MONO8, timestamp);
-        // publishImage(right_image_pub, rightMono, sensor_msgs::image_encodings::MONO8, timestamp);
-        // publishImage(left_disp_pub, depthmap, sensor_msgs::image_encodings::TYPE_32FC1, timestamp);
-        // publishPointCloud(point_cloud_pub, leftMono_f, depthmap, timestamp);
+    }
+    ros::waitForShutdown();
+    
+    
+
+    // // ros::Publisher left_image_pub = n.advertise<sensor_msgs::Image>("/camera/left/rectified", 2);
+    // // ros::Publisher right_image_pub = n.advertise<sensor_msgs::Image>("/camera/right/rectified", 2);
+    // // ros::Publisher left_disp_pub = n.advertise<sensor_msgs::Image>("/camera/left/depth", 2);
+    // ros::Publisher point_cloud_pub = n.advertise<sensor_msgs::PointCloud2>("/camera/left/pointcloud", 2);
+
+    // ros::Rate rate(10.0);
+
+    // uint32_t seq = 0;
+
+    // cv::Mat left, right, left8U, right8U;
+    // cv::Mat depthmap;
+
+    // if (ros::ok())
+    //     ROS_INFO("Camera publisher started on /camera/left/rectified, /camera/right/rectified, /camera/left/disparity");
+
+    // while (ros::ok())
+    // {
+    //     client.getDepth(left, right, depthmap);
+
+    //     // cv::extractChannel(left, leftMono_f, 0);
+    //     // cv::extractChannel(right, rightMono, 0);
+    //     // leftMono_f.convertTo(leftMono, CV_8U);
+    //     // rightMono.convertTo(rightMono, CV_8U);
+
+    //     auto timestamp = ros::Time::now() - ros::Duration(0.1); // TODO: this offsets the timestamp since I don't have a way to get the frame timestamp atm..
+    //     // publishImage(left_image_pub, leftMono, sensor_msgs::image_encodings::MONO8, timestamp);
+    //     // publishImage(right_image_pub, rightMono, sensor_msgs::image_encodings::MONO8, timestamp);
+    //     // publishImage(left_disp_pub, depthmap, sensor_msgs::image_encodings::TYPE_32FC1, timestamp);
+    //     // publishPointCloud(point_cloud_pub, leftMono_f, depthmap, timestamp);
         
 
-        ros::spinOnce();
-        rate.sleep();
-    }
+    //     ros::spinOnce();
+    //     rate.sleep();
+    // }
 
     return 0;
 }
