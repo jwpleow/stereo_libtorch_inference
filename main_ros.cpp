@@ -76,30 +76,36 @@ void publishPointCloud(const ros::Publisher& pub, const cv::Mat& image, const cv
 
 int main(int argc, char** argv)
 {
+    // inputs
     std::string calib_params_file = "../CalibParams_Stereo.yml";
     std::string model_path = "../aanet_gpu_model.pt";
     cv::Size expected_size(672, 384); // WxH
     torch::Device device(torch::kCUDA);
 
-    std::string raw_camera_topic = "/camera";
+    std::string raw_camera_topic = "/stereo/image";
+    std::string pointcloud_topic = "/stereo/pointcloud";
 
     Camera::StereoRectifier rectifier(calib_params_file);
     Inference::InferClient infer_client(model_path, expected_size, device);
 
+    // init ros stuff
     ros::init(argc, argv, "camera_processor");
-
+    
     ros::NodeHandle nh;
+    ros::Rate rate(10.0);
     ros::AsyncSpinner spinner(4);
     spinner.start();
 
     ROS_Input ros_input(nh, raw_camera_topic);
+    ros::Publisher point_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 2);
+
     cv::Mat frame, frameC3, left_temp, right_temp, left, right, left_C3, right_C3;
     cv::Mat disparity, disparity_vis, pointcloud;
     int64_t timestamp;
 
     if (ros::ok())
         ROS_INFO("camera_node ok");
-
+    
     while (ros::ok())
     {
         timestamp = ros_input.read(frame); // CV_8UC1
@@ -110,6 +116,12 @@ int main(int argc, char** argv)
 
         infer_client.runInference(left_C3, right_C3, disparity);
 
+        // get pointcloud
+        cv::reprojectImageTo3D(disparity, pointcloud, rectifier.stereo_calib_params.Q, true, -1); // -1 outputs CV_32F, will be reprojected to left camera's rectified coord system
+
+        ros::Time timestamp_ros(static_cast<int32_t>(timestamp / 1000), static_cast<int32_t>((timestamp % 1000) * 1000000));
+        publishPointCloud(point_cloud_pub, left, pointcloud, timestamp_ros);
+
         // visualisation
         double min_disp_val, max_disp_val;
         cv::minMaxLoc(disparity, &min_disp_val, &max_disp_val);
@@ -117,47 +129,11 @@ int main(int argc, char** argv)
         cv::imshow("Left", left);
         cv::imshow("Right", right);
         cv::imshow("Disparity", disparity_vis);
-        
+
+        rate.sleep();
         if (cv::waitKey(1) >= 0) break;
     }
-    ros::waitForShutdown();
-    
-    
-
-    // // ros::Publisher left_image_pub = n.advertise<sensor_msgs::Image>("/camera/left/rectified", 2);
-    // // ros::Publisher right_image_pub = n.advertise<sensor_msgs::Image>("/camera/right/rectified", 2);
-    // // ros::Publisher left_disp_pub = n.advertise<sensor_msgs::Image>("/camera/left/depth", 2);
-    // ros::Publisher point_cloud_pub = n.advertise<sensor_msgs::PointCloud2>("/camera/left/pointcloud", 2);
-
-    // ros::Rate rate(10.0);
-
-    // uint32_t seq = 0;
-
-    // cv::Mat left, right, left8U, right8U;
-    // cv::Mat depthmap;
-
-    // if (ros::ok())
-    //     ROS_INFO("Camera publisher started on /camera/left/rectified, /camera/right/rectified, /camera/left/disparity");
-
-    // while (ros::ok())
-    // {
-    //     client.getDepth(left, right, depthmap);
-
-    //     // cv::extractChannel(left, leftMono_f, 0);
-    //     // cv::extractChannel(right, rightMono, 0);
-    //     // leftMono_f.convertTo(leftMono, CV_8U);
-    //     // rightMono.convertTo(rightMono, CV_8U);
-
-    //     auto timestamp = ros::Time::now() - ros::Duration(0.1); // TODO: this offsets the timestamp since I don't have a way to get the frame timestamp atm..
-    //     // publishImage(left_image_pub, leftMono, sensor_msgs::image_encodings::MONO8, timestamp);
-    //     // publishImage(right_image_pub, rightMono, sensor_msgs::image_encodings::MONO8, timestamp);
-    //     // publishImage(left_disp_pub, depthmap, sensor_msgs::image_encodings::TYPE_32FC1, timestamp);
-    //     // publishPointCloud(point_cloud_pub, leftMono_f, depthmap, timestamp);
-        
-
-    //     ros::spinOnce();
-    //     rate.sleep();
-    // }
+    spinner.stop();
 
     return 0;
 }
