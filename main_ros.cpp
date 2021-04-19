@@ -44,15 +44,15 @@ void publishPointCloud(const ros::Publisher& pub, const cv::Mat& image, const cv
     cloudmsg.row_step = depthmap.step;
 
     sensor_msgs::PointCloud2Modifier pcd_modifier(cloudmsg);
-    // pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
-    pcd_modifier.setPointCloud2Fields(4, "x", 1, sensor_msgs::PointField::FLOAT32,
-                                      "y", 1, sensor_msgs::PointField::FLOAT32,
-                                      "z", 1, sensor_msgs::PointField::FLOAT32,
-                                      "intensity", 1, sensor_msgs::PointField::FLOAT32);
+    pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
+    // pcd_modifier.setPointCloud2Fields(4, "x", 1, sensor_msgs::PointField::FLOAT32,
+    //                                   "y", 1, sensor_msgs::PointField::FLOAT32,
+    //                                   "z", 1, sensor_msgs::PointField::FLOAT32,
+    //                                   "intensity", 1, sensor_msgs::PointField::FLOAT32);
     sensor_msgs::PointCloud2Iterator<float> iter_x(cloudmsg, "x");
     sensor_msgs::PointCloud2Iterator<float> iter_y(cloudmsg, "y");
     sensor_msgs::PointCloud2Iterator<float> iter_z(cloudmsg, "z");
-    sensor_msgs::PointCloud2Iterator<float> iter_intensity(cloudmsg, "intensity");
+    // sensor_msgs::PointCloud2Iterator<float> iter_intensity(cloudmsg, "intensity");
     cloudmsg.data.resize(cloudmsg.height * cloudmsg.row_step);
     
     if (depthmap.rows != image.rows || depthmap.cols != image.cols ) std::cerr << "depthmap and image have diff dimensions!\n";
@@ -61,12 +61,12 @@ void publishPointCloud(const ros::Publisher& pub, const cv::Mat& image, const cv
 
     for (int r = 0; r < mat.rows; r++)
     {
-        for (int c = 0; c < mat.cols; c++, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity)
+        for (int c = 0; c < mat.cols; c++, ++iter_x, ++iter_y, ++iter_z) // ++iter_intensity
         {
             *iter_x = mat(r, c)[0];
             *iter_y = mat(r, c)[1];
             *iter_z = mat(r, c)[2];
-            *iter_intensity = image.at<float>(r, c);
+            // *iter_intensity = image.at<float>(r, c);
         }
     }
 
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     int64_t timestamp;
 
     if (ros::ok())
-        ROS_INFO("camera_node ok");
+        ROS_INFO("camera_node ok. Pointcloud published on %s", pointcloud_topic.c_str());
     
     while (ros::ok())
     {
