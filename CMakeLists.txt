@@ -4,6 +4,8 @@ project(torch_inference)
 ## cmake commands
 ## if using -D_GLIBCXX_USE_CXX11_ABI=1 libtorch... (Recommended, unless you are also using precxx11 abi opencv, etc) use:
 # cmake -DCMAKE_PREFIX_PATH=/home/joel/Downloads/libtorch1.7 ..
+# wget https://download.pytorch.org/libtorch/cu102/libtorch-cxx11-abi-shared-with-deps-1.7.0.zip
+
 ## pytorch from conda has -D_GLIBCXX_USE_CXX11_ABI=0
 # cmake -DCMAKE_PREFIX_PATH="$(python -c 'import torch.utils; print(torch.utils.cmake_prefix_path)')" ..
 
@@ -53,7 +55,7 @@ if(ROS_FOUND)
 
     add_executable(camera_node main_ros.cpp ROS_Input.cpp InferClient.cpp Camera.cpp utils/utils.cpp)
     target_link_libraries(camera_node -I/opt/ros/$ENV{ROS_DISTRO}/include -L/opt/ros/$ENV{ROS_DISTRO}/lib
-    -lroscpp -lrostime -lrosconsole -lroscpp_serialization -lcv_bridge -limage_transport)
+    -lroscpp -lrostime -lrosconsole -lroscpp_serialization -lcv_bridge -limage_transport -lcamera_info_manager)
     target_link_libraries(camera_node "${TORCH_LIBRARIES}")
     target_link_libraries(camera_node -Wl,--no-as-needed dcn_v2_cuda_forward_v2)
     target_link_libraries(camera_node ${OpenCV_LIBS})
