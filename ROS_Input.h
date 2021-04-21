@@ -25,7 +25,7 @@ class ROS_Input
     virtual ~ROS_Input();
 
     // get the last left & right image
-    int64_t read(cv::Mat& frame);
+    ros::Time read(cv::Mat& frame);
 
     private:
     void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
@@ -37,8 +37,8 @@ class ROS_Input
     image_transport::Subscriber camera_sub_;
 
     cv::Mat last_frame;
-    int64_t last_timestamp;
-    rigtorp::SPSCQueue<std::pair<cv::Mat, int64_t>> frame_buffer; // pair of image and timestamp in ms (epoch)
+    ros::Time last_timestamp;
+    rigtorp::SPSCQueue<std::pair<cv::Mat, ros::Time>> frame_buffer; // pair of image and timestamp in ms (epoch)
 
     std::thread frame_read_thread;
     std::mutex frame_read_lock;

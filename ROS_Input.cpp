@@ -15,9 +15,9 @@ ROS_Input::~ROS_Input()
 }
 
 // get the last image frame, blocks until a frame is ready
-int64_t ROS_Input::read(cv::Mat &frame)
+ros::Time ROS_Input::read(cv::Mat &frame)
 {
-    std::pair<cv::Mat, int64_t> temp;
+    std::pair<cv::Mat, ros::Time> temp;
 
     int n;
     while (frame_buffer.empty())
@@ -39,7 +39,7 @@ int64_t ROS_Input::read(cv::Mat &frame)
 
 void ROS_Input::imageCallback(const sensor_msgs::Image::ConstPtr &msg)
 {
-    auto temp_timestamp = static_cast<int64_t>(msg->header.stamp.sec) * 1000 + static_cast<int64_t>(msg->header.stamp.nsec / 1000000);
+    ros::Time temp_timestamp = msg->header.stamp;
     cv::Mat temp;
     try
     {

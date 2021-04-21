@@ -3,28 +3,27 @@
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
 #include "sensor_msgs/PointCloud2.h"
+#include "sensor_msgs/CameraInfo.h"
 #include "sensor_msgs/point_cloud2_iterator.h"
 #include "sensor_msgs/image_encodings.h"
 #include "std_msgs/Header.h"
 #include "cv_bridge/cv_bridge.h"
 #include "image_transport/image_transport.h"
+#include <camera_info_manager/camera_info_manager.h>
 
 #include "InferClient.h"
 #include "Camera.h"
 #include "utils/utils.h"
 #include "ROS_Input.h"
 
-
-void publishImage(const ros::Publisher& pub, const cv::Mat& image, const std::string& encoding, const ros::Time& timestamp)
+void publishImage(const image_transport::Publisher& pub, const cv::Mat& image, const std::string& encoding, ros::Time& timestamp)
 {
-    cv_bridge::CvImage img_bridge;
-    sensor_msgs::Image img_msg;
+    sensor_msgs::ImagePtr msg;
     std_msgs::Header header;
     header.stamp = timestamp;
-    img_bridge = cv_bridge::CvImage(header, encoding, image);
-    img_bridge.toImageMsg(img_msg);
-
-    pub.publish(img_msg);
+    header.frame_id = "left_camera_link";
+    msg = cv_bridge::CvImage(header, encoding, image).toImageMsg();
+    pub.publish(msg);
 }
 
 // image should be 8FC3 [0, 255], and depthmap should be 32FC3 (xyz), and same size as image
@@ -96,12 +95,22 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(4);
     spinner.start();
 
+    image_transport::ImageTransport it(nh);
+
     ROS_Input ros_input(nh, raw_camera_topic);
     ros::Publisher point_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 2);
+    // image_transport::CameraPublisher camera_pub = it.advertiseCamera(camera_pub_topic, 1);
+    image_transport::Publisher rgb_rect_pub = it.advertise("/camera/rgb/image_rect_color", 1);
+    image_transport::Publisher depth_pub = it.advertise("/camera/depth_registered/image_raw", 1);
+    ros::Publisher camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>("/camera/rgb/camera_info", 1);
+
+    // camera info
+    camera_info_manager::CameraInfoManager cam_info_mgr(nh, "arducam", "file:///home/joel/Desktop/TorchInference/camera_info_test.yaml");
+    sensor_msgs::CameraInfo cam_info;
 
     cv::Mat frame, frameC3, left_temp, right_temp, left, right, left_C3, right_C3;
     cv::Mat disparity, disparity_vis, pointcloud;
-    int64_t timestamp;
+    ros::Time timestamp;
 
     if (ros::ok())
         ROS_INFO("camera_node ok. Pointcloud published on %s", pointcloud_topic.c_str());
@@ -119,8 +128,19 @@ int main(int argc, char** argv)
         // get pointcloud
         cv::reprojectImageTo3D(disparity, pointcloud, rectifier.stereo_calib_params.Q, true, -1); // -1 outputs CV_32F, will be reprojected to left camera's rectified coord system
 
-        ros::Time timestamp_ros(static_cast<int32_t>(timestamp / 1000), static_cast<int32_t>((timestamp % 1000) * 1000000));
-        publishPointCloud(point_cloud_pub, left, pointcloud, timestamp_ros);
+        publishPointCloud(point_cloud_pub, left, pointcloud, timestamp);
+
+        // republish rectified camera feed as RGB with camerainfo, and depth image
+        cv::Mat depth_image(pointcloud.rows, pointcloud.cols, CV_32F);
+        cv::extractChannel(pointcloud, depth_image, 2);
+        depth_image = depth_image.clone();
+        publishImage(rgb_rect_pub, left_C3, "rgb8", timestamp);
+        publishImage(depth_pub, depth_image, "32FC1", timestamp);
+        
+        cam_info = cam_info_mgr.getCameraInfo();
+        cam_info.header.stamp = timestamp;
+        cam_info.header.frame_id = "left_camera_link";
+        camera_info_pub.publish(cam_info);
 
         // visualisation
         double min_disp_val, max_disp_val;
