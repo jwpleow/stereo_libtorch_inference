@@ -15,6 +15,9 @@ cd build
 cmake -DCMAKE_PREFIX_PATH=path/to/libtorch1.7 ..
 make
 # roscore
-./camera_publisher
+./depth_camera_node
 ```
-publishes the pointcloud to `/stereo/pointcloud`
+
+publishes left rectified rgb to `/left/image_rect_color/`
+publishes right rectified rgb to `/right/image_rect_color/`
+publishes depth to `/depth/image_rect`

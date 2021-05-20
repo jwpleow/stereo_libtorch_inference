@@ -13,6 +13,8 @@
 #include "cv_bridge/cv_bridge.h"
 #include "image_transport/image_transport.h"
 
+#include "utils/utils.h"
+
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -43,4 +45,6 @@ class ROS_Input
     std::thread frame_read_thread;
     std::mutex frame_read_lock;
     std::atomic<bool> grabOn;
+
+    Utils::FPSCounter fps_counter;
 };

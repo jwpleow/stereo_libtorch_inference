@@ -98,11 +98,12 @@ int main(int argc, char** argv)
     image_transport::ImageTransport it(nh);
 
     ROS_Input ros_input(nh, raw_camera_topic);
-    ros::Publisher point_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 2);
+    // ros::Publisher point_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 2);
     // image_transport::CameraPublisher camera_pub = it.advertiseCamera(camera_pub_topic, 1);
     image_transport::Publisher left_rgb_rect_pub = it.advertise("/left/image_rect_color", 1);
-    image_transport::Publisher right_rgb_rect_pub = it.advertise("/right/image_rect", 1);
-    image_transport::Publisher depth_pub = it.advertise("/camera/depth_registered/image_raw", 1);
+    image_transport::Publisher right_rgb_rect_pub = it.advertise("/right/image_rect_color", 1);
+    image_transport::Publisher depth_pub = it.advertise("/depth/image_rect", 1);
+    // ros::Publisher depth_camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>("/depth/camera_info", 1);
     ros::Publisher left_camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>("/left/camera_info", 1);
     ros::Publisher right_camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>("/right/camera_info", 1);
 
@@ -124,24 +125,28 @@ int main(int argc, char** argv)
         timestamp = ros_input.read(frame); // CV_8UC1
         rectifier.splitImage(frame, left_temp, right_temp);
         rectifier.rectify(left_temp, right_temp, left, right);
+
+        cv::fastNlMeansDenoising(left, left, 2.0f, 5, 9);
+        cv::fastNlMeansDenoising(right, right, 2.0f, 5, 9);
+
         cv::cvtColor(left, left_C3, cv::COLOR_GRAY2RGB);
         cv::cvtColor(right, right_C3, cv::COLOR_GRAY2RGB);
 
-        // infer_client.runInference(left_C3, right_C3, disparity);
+        infer_client.runInference(left_C3, right_C3, disparity);
 
         // // get pointcloud
-        // cv::reprojectImageTo3D(disparity, pointcloud, rectifier.stereo_calib_params.Q, true, -1); // -1 outputs CV_32F, will be reprojected to left camera's rectified coord system
+        cv::reprojectImageTo3D(disparity, pointcloud, rectifier.stereo_calib_params.Q, true, -1); // -1 outputs CV_32F, will be reprojected to left camera's rectified coord system
 
         // publishPointCloud(point_cloud_pub, left, pointcloud, timestamp);
 
         // republish rectified camera feed as RGB with camerainfo, and depth image
-        // cv::Mat depth_image(pointcloud.rows, pointcloud.cols, CV_32F);
-        // cv::extractChannel(pointcloud, depth_image, 2);
-        // depth_image = depth_image.clone();
+        cv::Mat depth_image(pointcloud.rows, pointcloud.cols, CV_32F);
+        cv::extractChannel(pointcloud, depth_image, 2);
+        depth_image = depth_image.clone();
 
         publishImage(left_rgb_rect_pub, left_C3, "rgb8", timestamp);
-        publishImage(right_rgb_rect_pub, right, "mono8", timestamp);
-        // publishImage(depth_pub, depth_image, "32FC1", timestamp);
+        publishImage(right_rgb_rect_pub, right_C3, "rgb8", timestamp);
+        publishImage(depth_pub, depth_image, "32FC1", timestamp);
         
         left_cam_info = left_cam_info_mgr.getCameraInfo();
         left_cam_info.header.stamp = timestamp;
@@ -151,14 +156,15 @@ int main(int argc, char** argv)
         right_cam_info.header.frame_id = "right_camera_link";
         left_camera_info_pub.publish(left_cam_info);
         right_camera_info_pub.publish(right_cam_info);
+        // depth_camera_info_pub.publish(left_cam_info);
 
         // visualisation
-        // double min_disp_val, max_disp_val;
-        // cv::minMaxLoc(disparity, &min_disp_val, &max_disp_val);
-        // disparity_vis = disparity / max_disp_val;
+        double min_disp_val, max_disp_val;
+        cv::minMaxLoc(disparity, &min_disp_val, &max_disp_val);
+        disparity_vis = disparity / max_disp_val;
         cv::imshow("Left", left_C3);
         cv::imshow("Right", right_C3);
-        // cv::imshow("Disparity", disparity_vis);
+        cv::imshow("Disparity", disparity_vis);
 
         rate.sleep();
         if (cv::waitKey(1) >= 0) break;

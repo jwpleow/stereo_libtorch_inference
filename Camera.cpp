@@ -134,7 +134,7 @@ void CameraBase::update()
     // cv::Mat last_frame;
     while (grabOn.load() == true)
     {
-        fps_counter.tick();
+        fps_counter.tick(true);
 
         video_capture >> last_frame;
         if (!frame_buffer.try_push(last_frame))

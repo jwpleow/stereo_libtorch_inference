@@ -59,4 +59,11 @@ if(ROS_FOUND)
     target_link_libraries(camera_node "${TORCH_LIBRARIES}")
     target_link_libraries(camera_node -Wl,--no-as-needed dcn_v2_cuda_forward_v2)
     target_link_libraries(camera_node ${OpenCV_LIBS})
+
+    add_executable(depth_camera_node main_ros_depth.cpp ROS_Input.cpp InferClient.cpp Camera.cpp utils/utils.cpp)
+    target_link_libraries(depth_camera_node -I/opt/ros/$ENV{ROS_DISTRO}/include -L/opt/ros/$ENV{ROS_DISTRO}/lib
+    -lroscpp -lrostime -lrosconsole -lroscpp_serialization -lcv_bridge -limage_transport -lcamera_info_manager)
+    target_link_libraries(depth_camera_node "${TORCH_LIBRARIES}")
+    target_link_libraries(depth_camera_node -Wl,--no-as-needed dcn_v2_cuda_forward_v2)
+    target_link_libraries(depth_camera_node ${OpenCV_LIBS})
 endif()

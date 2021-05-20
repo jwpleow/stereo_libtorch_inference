@@ -5,6 +5,7 @@ ROS_Input::ROS_Input(const ros::NodeHandle& nh, const std::string& camera_topic)
 : nh_(nh), it_(nh_), frame_buffer(3)
 {
     camera_sub_ = it_.subscribe(camera_topic, 1, [this](const sensor_msgs::Image::ConstPtr &msg){imageCallback(msg);});
+    fps_counter.init();
 }
 
 ROS_Input::~ROS_Input()
@@ -27,7 +28,7 @@ ros::Time ROS_Input::read(cv::Mat &frame)
         if ((n % 10) == 0 && n > 1)
             std::cout << "Frame buffer empty, waiting for image...\n";
     }
-
+    fps_counter.tick(true);
     {
         std::lock_guard<std::mutex> scopeLock(frame_read_lock); // todo: use a proper circular buffer
         temp = (*frame_buffer.front());
