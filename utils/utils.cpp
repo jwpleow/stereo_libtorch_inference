@@ -11,7 +11,7 @@ namespace Utils{
     {
         torch::Tensor temp;
         convertCvMatToTensor(input, temp);
-        normalizeTensor(temp);
+        // normalizeTensor(temp);
 
         if (required_padding.height > 0 || required_padding.width > 0)
         {
@@ -33,10 +33,13 @@ namespace Utils{
 
     void printTensorProperties(const torch::Tensor &tens)
     {
-        std::cout << "Dimensions: " << tens.dim() << "\n"
+        std::cout << "Tensor Properties:\n"
+                  << "Dimensions: " << tens.dim() << "\n"
                   << "Datatype: " << tens.dtype() << "\n"
                   << "Device: " << tens.device() << "\n"
                   << "Size: " << tens.sizes() << "\n"
+                  << "Max value: " << torch::max(tens) << "\n"
+                  << "Min value: " << torch::min(tens) << "\n"
                   << "Number of Elements: " << tens.numel() << "\n";
     }
 
@@ -47,7 +50,8 @@ namespace Utils{
 
         cv::Scalar means = cv::mean(mat);
 
-        std::cout << "Dimensions: " << mat.dims << "\n"
+        std::cout << "OpenCV Mat Properties:\n"
+                  << "Dimensions: " << mat.dims << "\n"
                   << "Datatype: " << getCvMatType(mat.type()) << "\n"
                   << "Size: " << mat.size << "\n"
                   << "Number of Elements: " << mat.total() << "\n"
@@ -62,7 +66,7 @@ namespace Utils{
         tens = torch::from_blob(mat.data, {1, mat.rows, mat.cols, mat.channels()}, at::kByte).clone();
         tens = tens.to(at::kFloat);
         tens = tens.permute({0, 3, 1, 2}); // rearrange to BxCxHxW
-        tens = tens.div(255.0);
+        // tens = tens.div(255.0);
     }
 
     void convertTensorToCvMat(const torch::Tensor &tens, cv::Mat &mat)
@@ -116,6 +120,10 @@ namespace Utils{
 
     void calculatePadding(const cv::Size& original_size, const cv::Size& expected_size, cv::Size& padding_needed)
     {
+        if (expected_size.width - original_size.width < 0 || expected_size.height - original_size.height < 0)
+        {
+            std::cout << "Warning: expected input size is smaller than original image!\n";
+        }
         padding_needed.height = std::max(expected_size.height - original_size.height, 0);
         padding_needed.width = std::max(expected_size.width - original_size.width, 0);
     }

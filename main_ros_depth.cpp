@@ -77,8 +77,8 @@ int main(int argc, char** argv)
 {
     // inputs
     std::string calib_params_file = "../CalibParams_Stereo.yml";
-    std::string model_path = "../aanet_gpu_model.pt";
-    cv::Size expected_size(672, 384); // WxH
+    std::string model_path = "../bgnet_plus_model.pt";
+    cv::Size expected_size(640, 384); // WxH
     torch::Device device(torch::kCUDA);
 
     std::string raw_camera_topic = "/stereo/image";
@@ -126,13 +126,19 @@ int main(int argc, char** argv)
         rectifier.splitImage(frame, left_temp, right_temp);
         rectifier.rectify(left_temp, right_temp, left, right);
 
-        cv::fastNlMeansDenoising(left, left, 2.0f, 5, 9);
-        cv::fastNlMeansDenoising(right, right, 2.0f, 5, 9);
+        // manual crop, TODO: better more generalisable solution?
+        cv::Rect newRect(0, 0, left.size[1], expected_size.height);
+        left = left(newRect).clone();
+        right = right(newRect).clone();
+        // cv::fastNlMeansDenoising(left, left, 2.0f, 5, 9);
+        // cv::fastNlMeansDenoising(right, right, 2.0f, 5, 9);
 
         cv::cvtColor(left, left_C3, cv::COLOR_GRAY2RGB);
         cv::cvtColor(right, right_C3, cv::COLOR_GRAY2RGB);
 
-        infer_client.runInference(left_C3, right_C3, disparity);
+
+
+        infer_client.runInference(left, right, disparity);
 
         // // get pointcloud
         cv::reprojectImageTo3D(disparity, pointcloud, rectifier.stereo_calib_params.Q, true, -1); // -1 outputs CV_32F, will be reprojected to left camera's rectified coord system

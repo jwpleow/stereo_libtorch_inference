@@ -32,6 +32,7 @@ InferClient::~InferClient()
 
 void InferClient::runInference(const cv::Mat& left, const cv::Mat& right, cv::Mat& disparity)
 {
+    // MAKE SURE INPUT DATA ARE CONTIGUOUS!!
     if (left.size != right.size)
     {
         std::cerr << "Warning: left and right image input do not have equal size!\n";
