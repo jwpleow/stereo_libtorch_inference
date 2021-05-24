@@ -177,14 +177,15 @@ namespace Utils{
     {
     }
 
-    void FPSCounter::init()
+    void FPSCounter::init(std::string name)
     {
+        name_ = name;
         start_time_ = std::chrono::system_clock::now();
     }
 
     void FPSCounter::printAvgFps()
     {
-        std::cout << std::setprecision(2) << std::fixed << "Average fps: " << avg_fps_ << std::endl;
+        std::cout << std::setprecision(2) << std::fixed << name_ << ": Average fps - " << avg_fps_ << std::endl;
     }
 
     float FPSCounter::getAvgFps()
@@ -200,7 +201,7 @@ namespace Utils{
             start_time_ = std::chrono::system_clock::now();
             avg_fps_ = 0.8f * avg_fps_ + 0.2f * static_cast<float>(frames1sec_) * (1000.f / static_cast<float>(1000 + millisecond_count));
             frames1sec_ = 0;
-            if (print) std::cout << "FPS: " << avg_fps_ << "\n";
+            if (print) printAvgFps();
         }
         frames1sec_++;
     }

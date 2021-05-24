@@ -5,7 +5,7 @@ ROS_Input::ROS_Input(const ros::NodeHandle& nh, const std::string& camera_topic)
 : nh_(nh), it_(nh_), frame_buffer(3)
 {
     camera_sub_ = it_.subscribe(camera_topic, 1, [this](const sensor_msgs::Image::ConstPtr &msg){imageCallback(msg);});
-    fps_counter.init();
+    fps_counter.init("ROS camera feed");
 }
 
 ROS_Input::~ROS_Input()

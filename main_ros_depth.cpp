@@ -136,8 +136,6 @@ int main(int argc, char** argv)
         cv::cvtColor(left, left_C3, cv::COLOR_GRAY2RGB);
         cv::cvtColor(right, right_C3, cv::COLOR_GRAY2RGB);
 
-
-
         infer_client.runInference(left, right, disparity);
 
         // // get pointcloud

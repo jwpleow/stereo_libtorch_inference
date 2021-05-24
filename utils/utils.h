@@ -102,11 +102,12 @@ namespace Utils{
     class FPSCounter
     {
     public:
+        
         FPSCounter();
         virtual ~FPSCounter();
 
-        // call init when ready to start measuring 
-        void init();
+        // call init when ready to start measuring, set a name to print during ticks
+        void init(std::string name = "");
         // prints avg_fps_
         void printAvgFps();
         // returns avg_fps_
@@ -114,6 +115,7 @@ namespace Utils{
         // tick. set print to true to print a message when fps updates
         void tick(bool print = false);
 
+        std::string name_;
 
     protected:
         std::chrono::system_clock::time_point start_time_; // start time to count till 1 second

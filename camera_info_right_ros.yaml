@@ -1,11 +1,11 @@
-image_width: 628
-image_height: 383
+image_width: 631
+image_height: 384
 camera_name: arducamR
 camera_matrix:
   rows: 3
   cols: 3
-  data: [ 4.6109618559812753e+02, 0., 3.2169176261322929e+02, 0.,
-       4.6084577343890948e+02, 1.9619164059284944e+02, 0., 0., 1. ]
+  data: [ 4.6113103930140636e+02, 0., 3.1751041286878541e+02, 0.,
+       4.6088232229951433e+02, 1.9831495166938100e+02, 0., 0., 1. ]
 distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
