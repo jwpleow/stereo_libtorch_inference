@@ -32,7 +32,7 @@ InferClient::~InferClient()
 
 void InferClient::runInference(const cv::Mat& left, const cv::Mat& right, cv::Mat& disparity)
 {
-    // MAKE SURE INPUT DATA ARE CONTIGUOUS!!
+
     if (left.size != right.size)
     {
         std::cerr << "Warning: left and right image input do not have equal size!\n";
@@ -45,19 +45,22 @@ void InferClient::runInference(const cv::Mat& left, const cv::Mat& right, cv::Ma
         std::cerr << "Expected height: " << expected_size.height << ", Left image height: " << left.rows << "\n";
         std::cerr << "Expected width: " << expected_size.width << ", Left image width: " << left.cols << "\n";
     }
+    
+    // make sure input data is contiguous for the copy to torch tensor
+    cv::Mat left_temp, right_temp;
+    left_temp = left.isContinuous() ? left : left.clone();
+    right_temp = right.isContinuous() ? right : right.clone();
 
-    // preprocessing ~ 0.004s
     torch::Tensor leftT, rightT;
-    original_size = cv::Size(left.cols, left.rows);
+    original_size = cv::Size(left_temp.cols, left_temp.rows);
     Utils::calculatePadding(original_size, expected_size, required_padding);
-    Utils::transformImage(left, leftT, required_padding, device);
-    Utils::transformImage(right, rightT, required_padding, device);
+    Utils::transformImage(left_temp, leftT, required_padding, device);
+    Utils::transformImage(right_temp, rightT, required_padding, device);
 
     std::vector<torch::jit::IValue> input;
     input.push_back(leftT);
     input.push_back(rightT);
 
-    // predict ~ 0.075s
     auto output = model.forward(input).toTensor().cpu().squeeze();
 
     cv::Mat disparity_temp;
