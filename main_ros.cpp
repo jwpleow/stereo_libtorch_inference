@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     // inputs
     std::string calib_params_file = "../CalibParams_Stereo.yml";
     std::string model_path = "../aanet_gpu_model.pt";
-    cv::Size expected_size(672, 384); // WxH
+    cv::Size expected_size(640, 384); // WxH
     torch::Device device(torch::kCUDA);
 
     std::string raw_camera_topic = "/stereo/image";

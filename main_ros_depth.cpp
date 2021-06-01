@@ -120,16 +120,18 @@ int main(int argc, char** argv)
     if (ros::ok())
         ROS_INFO("camera_node ok. Pointcloud published on %s", pointcloud_topic.c_str());
     
+    Utils::FPSCounter fps_counter;
+    fps_counter.init("node publish hz");
     while (ros::ok())
     {
         timestamp = ros_input.read(frame); // CV_8UC1
         rectifier.splitImage(frame, left_temp, right_temp);
         rectifier.rectify(left_temp, right_temp, left, right);
-
         // manual crop, TODO: better more generalisable solution?
-        cv::Rect newRect(0, 0, left.size[1], expected_size.height);
-        left = left(newRect).clone();
-        right = right(newRect).clone();
+        // bring to 384 x 640
+        // cv::Rect newRect(0, 0, left.size[1], expected_size.height);
+        // left = left(newRect).clone();
+        // right = right(newRect).clone();
         // cv::fastNlMeansDenoising(left, left, 2.0f, 5, 9);
         // cv::fastNlMeansDenoising(right, right, 2.0f, 5, 9);
 
@@ -170,6 +172,7 @@ int main(int argc, char** argv)
         cv::imshow("Right", right_C3);
         cv::imshow("Disparity", disparity_vis);
 
+        fps_counter.tick(true);
         rate.sleep();
         if (cv::waitKey(1) >= 0) break;
     }

@@ -8,8 +8,8 @@ int main()
     // test
     std::string capture_string = "udpsrc port=5000 ! application/x-rtp, media=video, encoding-name=JPEG, payload=96 ! rtpjpegdepay ! jpegdec ! videoconvert ! appsink";
     std::string calib_params_file = "../CalibParams_Stereo.yml";
-    std::string model_path = "../aanet_gpu_model.pt";
-    cv::Size expected_size(672, 384); // WxH
+    std::string model_path = "../bgnet_plus_model.pt";
+    cv::Size expected_size(640, 384); // WxH
     torch::Device device(torch::kCUDA);
 
     Inference::CameraInferClient client(capture_string, calib_params_file, model_path, expected_size, device);
