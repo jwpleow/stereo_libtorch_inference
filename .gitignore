@@ -1,5 +1,4 @@
 .vscode/
-*.pt
 *.yml
 build/
 *.png
