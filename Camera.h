@@ -14,7 +14,6 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "utils/utils.h"
-#include "thirdparty/SPSCQueue.h"
 
 namespace Camera{
 
@@ -117,7 +116,6 @@ class CameraBase
     int frame_height;
 
     cv::VideoCapture video_capture;
-    rigtorp::SPSCQueue<cv::Mat> frame_buffer;
     cv::Mat last_frame;
     std::thread frame_read_thread;
     std::mutex frame_read_lock;

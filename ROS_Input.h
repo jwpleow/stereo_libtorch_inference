@@ -18,7 +18,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "thirdparty/SPSCQueue.h"
 
 class ROS_Input
 {
@@ -38,9 +37,8 @@ class ROS_Input
     image_transport::ImageTransport it_;
     image_transport::Subscriber camera_sub_;
 
-    cv::Mat last_frame;
     ros::Time last_timestamp;
-    rigtorp::SPSCQueue<std::pair<cv::Mat, ros::Time>> frame_buffer; // pair of image and timestamp in ms (epoch)
+    std::pair<cv::Mat, ros::Time> last_frame; // pair of image and timestamp in ms (epoch)
 
     std::thread frame_read_thread;
     std::mutex frame_read_lock;

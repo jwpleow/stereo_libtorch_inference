@@ -196,10 +196,11 @@ namespace Utils{
     void FPSCounter::tick(bool print)
     {
         // if past 1 second, reset the start time and calculate the new fps
-        if (int millisecond_count = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time_).count() > 1000)
+        int millisecond_count = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time_).count();
+        if (millisecond_count > 1000)
         {
             start_time_ = std::chrono::system_clock::now();
-            avg_fps_ = 0.8f * avg_fps_ + 0.2f * static_cast<float>(frames1sec_) * (1000.f / static_cast<float>(1000 + millisecond_count));
+            avg_fps_ = 0.8f * avg_fps_ + 0.2f * static_cast<float>(frames1sec_) * (1000.f / static_cast<float>(millisecond_count));
             frames1sec_ = 0;
             if (print) printAvgFps();
         }
